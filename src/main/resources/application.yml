@@ -1,0 +1,129 @@
+spring:
+  application:
+    name: ${APP_NAME:polygo-health-service}
+  profiles:
+    active: dev
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: ${DB_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari: 
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      idle-timeout: ${DB_IDLE_TIMEOUT:300000}
+      connection-timeout: ${DB_CONN_TIMEOUT:30000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT:5000}
+      leak-detection-threshold: ${DB_LEAK_DETECTION:60000}
+      pool-name: ${DB_POOL_NAME}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        default_schema: ${DB_SCHEMA}
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        jakarta.persistence.schema-generation.database.action: none
+        jakarta.persistence.schema-generation.create-source: metadata
+        jakarta.persistence.schema-generation.scripts.action: none
+      jakarta:
+        persistence:
+          create-database-schemas: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      group-id: ${KAFKA_CONSUMER_GROUP}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 11
+    locations: classpath:db/migration
+    schemas:
+    default-schema:
+    create-schemas: true
+
+# Server Configuration
+services:
+  kong-url: ${KONG_URL}
+  routes:
+    bot: /bot
+    market-data: /market-data
+    notification: /notify
+    strategy: /strategy
+    wallet: /wallet
+    audit: /audit
+  endpoints:
+    wallet-balance-snapshot: /wallet/api/v1/balances/venues/last-snapshot
+    audit-search: /search
+    status-base: /api/health/status
+    status-audit: /audit
+    status-service: /service
+    status-market: /market
+    status-market-fee: /market-fee
+    status-wallet-balance: /wallet-balance
+    config-base: /api/health/config
+    config-service: /{serviceName}
+    config-entry: /{serviceName}/{key}
+    telegram-base: /api/health
+    telegram-test: /test-telegram
+
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: /
+
+
+# Logging
+logging:
+  level:
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+notification:
+  kafka-topic: ${NOTIFICATION_KAFKA_TOPIC}
+  telegram-chat-id: ${NOTIFICATION_TELEGRAM_CHAT_ID}
+
+# Cleanup Job Configuration
+cleanup:
+  message:
+    cron: ${CLEANUP_MESSAGE_CRON:0 0 * * * *}
+    retention-days: ${CLEANUP_MESSAGE_RETENTION_DAYS:30}
+    batch-size: ${CLEANUP_MESSAGE_BATCH_SIZE:10000}
+
+springdoc:
+  show-actuator: ${SHOW_ACTUATOR_IN_SWAGGER:true}
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
